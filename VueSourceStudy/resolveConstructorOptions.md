@@ -74,3 +74,100 @@ ctor.options的结构如下图
 下面引用一张网上的图片
 ![options init](./img/vueOptions02.png)
 
+
+## Ctor是Vue.extend创建的"子类"
+如果Ctor是Vue.extend创建的"子类"，那么在extend的过程中，Ctor上就会有super属性。
+
+```
+const Sub = function VueComponent (options) {
+  this._init(options)
+}
+...
+Sub['super'] = Super
+...
+```
+Ctor上有了super属性，就会去执行if块内的代码
+```
+  if (Ctor.super) {
+    const superOptions = resolveConstructorOptions(Ctor.super)
+    const cachedSuperOptions = Ctor.superOptions
+    ...
+  }
+  // Vue.extend相关代码
+  Vue.extend = function (extendOptions: Object): Function {
+    ...
+    Sub.superOptions = Super.options // Sub.superOptions指向基础构造器的options
+    ...
+  }
+```
+首先递归调用resolveConstructorOptions方法，返回"父类"上的options并赋值给superOptions变量。然后把"自身"的superOptions赋值给cachedSuperOptions变量。
+然后比较这两个变量的值,当这两个变量值不等时，说明"父类"的options改变过了。
+例如执行了Vue.mixin方法，这时候就需要把"自身"的superOptions属性替换成最新的。然后检查是否"自身"的options是否发生变化。resolveModifiedOptions的功能就是这个。
+```
+if (superOptions !== cachedSuperOptions) {
+  // super option changed,
+  // need to resolve new options.
+  Ctor.superOptions = superOptions
+  // check if there are any late-modified/attached options (#4976)
+  const modifiedOptions = resolveModifiedOptions(Ctor)
+  ....
+}
+```
+例子来说明一下。
+```
+  var subVm = Vue.component('comp-a', {
+    template: '<span>{{type}}</span>',
+  });
+  // 此处通过mixin改变了Vue构造函数的options
+  Vue.mixin({data: function() {
+    return {
+      type: 'component'
+    };
+  }});
+  var vm = new Vue({
+    el: document.getElementById('app'),
+    components: {
+      subVm
+    }
+  });
+```
+上边例子中因为父类的options改变了，导致superOptions和cachedSuperOptions就不相等了。
+
+## resolveModifiedOptions
+```
+function resolveModifiedOptions (Ctor: Class<Component>): ?Object {
+  let modified
+  const latest = Ctor.options // 自身的options
+  const extended = Ctor.extendOptions // 构造"自身"时传入的options
+  const sealed = Ctor.sealedOptions // 封装的自身options的一个副本，方便比较是否发生了变化
+  // 循环遍历自身选项，如果有变化，则更新选项
+  for (const key in latest) {
+    if (latest[key] !== sealed[key]) {
+      if (!modified) modified = {}
+      modified[key] = dedupe(latest[key], extended[key], sealed[key])
+    }
+  }
+  return modified
+}
+```
+在看dedupe函数
+```
+function dedupe (latest, extended, sealed) {
+  // compare latest and sealed to ensure lifecycle hooks won't be duplicated
+  // between merges
+  if (Array.isArray(latest)) {
+    const res = []
+    sealed = Array.isArray(sealed) ? sealed : [sealed]
+    extended = Array.isArray(extended) ? extended : [extended]
+    for (let i = 0; i < latest.length; i++) {
+      // push original options and not sealed options to exclude duplicated options
+      if (extended.indexOf(latest[i]) >= 0 || sealed.indexOf(latest[i]) < 0) {
+        res.push(latest[i])
+      }
+    }
+    return res
+  } else {
+    return latest
+  }
+}
+```
