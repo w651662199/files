@@ -44,8 +44,9 @@
       initInternalComponent(vm, options)
     } else {
         // 单页应用中只有实例化根组件时才会走进这里
-        //选项合并
+        // 选项合并
       vm.$options = mergeOptions(
+        // 解析constructor上的options
         resolveConstructorOptions(vm.constructor),
         options || {},
         vm
