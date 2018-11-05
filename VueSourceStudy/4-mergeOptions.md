@@ -108,7 +108,9 @@ var vm = new Vue({
 那么就调用validateComponentName来验证传入的组件名称是否符合以下特征。
 
 1.包含数字，字母，下划线，连接符，并且以字母开头
+
 2.是否和html标签名称或svg标签名称相同
+
 3.是否和关键字名称相同，如undefined, infinity等
 
 
@@ -360,8 +362,11 @@ function mergeHook (
 mergeHook采用了一个嵌套三元表达式来控制最后的返回值。下面我们来解析这段三元表达式
 
 1.child options上不存在该属性，parent options上存在,则返回parent上的属性。
+
 2.child和parent都存在该属性，则返回concat之后的属性
+
 3.child上存在该属性，parent不存在，且child上的该属性是Array，则直接返回child上的该属性
+
 4.child上存在该属性，parent不存在，且child上的该属性不是Array，则把该属性先转换成Array,再返回。
 
 ### props/methods/inject/computed的策略
