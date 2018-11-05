@@ -30,6 +30,7 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
 
 ## ctor是基础Vue构造器
 ctor.options的结构如下图
+
 ![Vue.options](./img/vueOptions.png 'vue 构造器options')
 
 此时到这里，我们并没有看到过这几个选项，构造器里也没有设置，那么是在哪设置的呢？
@@ -171,3 +172,27 @@ function dedupe (latest, extended, sealed) {
   }
 }
 ```
+从作者的注释可以看到这个方法主要就是防止生命周期构造函数重复。我们再来看该方法传入的3个参数。latest，extended，sealed，lateset表示的是"自身"新增的options。extended表示的是当前构造器上新增的extended options，sealed表示的是当前构造器上新增的封装options。
+回到源码，如果latest不是数组的话(lateset是"自身"新增的options)，这里不需要去重，直接返回latest。如果传入的latest是数组（如果latest是数组，一般这个新增的options就是生命周期钩子函数），则遍历该数组，如果该数组的某项在extended数组中有或者在sealed数组中没有，则推送到返回数组中从而实现去重。
+
+```
+// src/shared/util.js
+// 单纯的合并选项
+export function extend (to: Object, _from: ?Object): Object {
+  for (const key in _from) {
+    to[key] = _from[key]
+  }
+  return to
+}
+```
+
+```
+if (modifiedOptions) {
+  extend(Ctor.extendOptions, modifiedOptions)
+}
+options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions)
+if (options.name) {
+  options.components[options.name] = Ctor
+}
+```
+如果”自身“有新添加的options，则把新添加的options属性添加到Ctor.extendOptions属性上。调用mergeOptions方法合并"父类"构造器上的options和”自身“上的extendOptions(mergeOptions在下一篇博文中介绍)，最后返回合并后的options。
