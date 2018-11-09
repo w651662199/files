@@ -284,6 +284,9 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 该警告是说在非生产环境，不能使用驼峰的方式通过v-on添加监听事件。
+看下官网的解释
+>不同于组件和 prop，事件名不会被用作一个 JavaScript 变量名或属性名，所以就没有理由使用 camelCase 或 PascalCase 了。并且 v-on 事件监听器在 DOM 模板中会被自动转换为全小写 (因为 HTML 是大小写不敏感的)，所以 v-on:myEvent 将会变成 v-on:myevent——导致 myEvent 不可能被监听到。
+>因此，我们推荐你始终使用 kebab-case 的事件名。
 
 接着我们看$emit的具体实现
 ```
