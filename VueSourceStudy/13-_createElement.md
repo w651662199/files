@@ -56,4 +56,60 @@ export const createEmptyVNode = (text: string = '') => {
     }
   }
 ```
-这里检查组件的key值，如果是对象等类型，警告使用string或number类型的值作为key
+这里检查组件的key值，如果是对象等类型，给出警告应该使用string或number类型的值作为key。
+```
+  // support single function children as default scoped slot
+  if (Array.isArray(children) &&
+    typeof children[0] === 'function'
+  ) {
+    data = data || {}
+    data.scopedSlots = { default: children[0] }
+    children.length = 0
+  }
+```
+这里判断children是否为数组，并且第一个元素的类型是否为function，如果是，则将第一个元素转为默认作用域插槽。并将children长度设置为0.
+
+由于 Virtual DOM 实际上是一个树状结构，每一个 VNode 可能会有若干个子节点，这些子节点应该也是 VNode 的类型。_createElement 接收的第 4 个参数 children 是任意类型的，因此我们需要把它们规范成 VNode 类型。
+```
+  if (normalizationType === ALWAYS_NORMALIZE) {
+    children = normalizeChildren(children)
+  } else if (normalizationType === SIMPLE_NORMALIZE) {
+    children = simpleNormalizeChildren(children)
+  }
+```
+判断normalizationType的值，如果为‘ALWAYS_NORMALIZE’调用normalizeChildren，如果值为‘SIMPLE_NORMALIZE’则调用simpleNormalizeChildren。
+从initRender中我们可以得知，当render函数是编译器生成的时候，调用simpleNormalizeChildren，当render是用户自己写的时候，调用normalizeChildren。
+这两个方法下篇细讲。
+
+规范化children后，接下来会去创建一个 VNode 的实例
+创建VNode分两种情况，一是当tag为字符串时，另一种是当tag为component类型时。
+
+```
+  if (typeof tag === 'string') {
+    let Ctor
+    ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag)
+    if (config.isReservedTag(tag)) {
+      // platform built-in elements
+      vnode = new VNode(
+        config.parsePlatformTagName(tag), data, children,
+        undefined, undefined, context
+      )
+    } else if ((!data || !data.pre) && isDef(Ctor = resolveAsset(context.$options, 'components', tag))) {
+      // component
+      vnode = createComponent(Ctor, data, context, children, tag)
+    } else {
+      // unknown or unlisted namespaced elements
+      // check at runtime because it may get assigned a namespace when its
+      // parent normalizes children
+      vnode = new VNode(
+        tag, data, children,
+        undefined, undefined, context
+      )
+    }
+  } else {
+    // direct component options / constructor
+    vnode = createComponent(tag, data, context, children)
+  }
+```
+这里先对 tag 做判断，如果是 string 类型，则接着判断如果是内置的一些节点，则直接创建一个普通 VNode，如果是为已注册的组件名，则通过 createComponent 创建一个组件类型的 VNode，否则创建一个未知的标签的 VNode。 如果是 tag 一个 Component 类型，则直接调用 createComponent 创建一个组件类型的 VNode 节点。对于 createComponent 创建组件类型的 VNode 的过程，我们之后会去介绍，本质上它还是返回了一个 VNode。
+

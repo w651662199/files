@@ -1,4 +1,4 @@
-# initMixin（1）
+# Performance
 
 作用为Vue原型添加_init方法，该方法在构造函数中调用
 
